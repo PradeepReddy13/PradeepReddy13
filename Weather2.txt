@@ -1,0 +1,97 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:location/location.dart';
+
+void main() => runApp(WeatherForecastApp());
+
+class WeatherForecastApp extends StatefulWidget {
+  @override
+  _WeatherForecastAppState createState() => _WeatherForecastAppState();
+}
+
+class _WeatherForecastAppState extends State<WeatherForecastApp> {
+  var weatherData;
+
+  @override
+  void initState() {
+    super.initState();
+    getLocationAndWeather();
+  }
+
+  void getLocationAndWeather() async {
+    Location location = Location();
+    LocationData locationData;
+
+    try {
+      locationData = await location.getLocation();
+    } catch (e) {
+      print("Error getting location: $e");
+    }
+
+    if (locationData != null) {
+      String apiKey = 'YOUR_API_KEY'; // Replace with your OpenWeatherMap API key
+      String latitude = locationData.latitude.toString();
+      String longitude = locationData.longitude.toString();
+      String url =
+          'https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longitude&appid=$apiKey&units=metric';
+
+      http.Response response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        setState(() {
+          weatherData = json.decode(response.body);
+        });
+      } else {
+        print('Request failed with status: ${response.statusCode}.');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Weather Forecast'),
+        ),
+        body: Center(
+          child: weatherData == null
+              ? CircularProgressIndicator()
+              : WeatherInfo(weatherData: weatherData),
+        ),
+      ),
+    );
+  }
+}
+
+class WeatherInfo extends StatelessWidget {
+  final dynamic weatherData;
+
+  WeatherInfo({required this.weatherData});
+
+  @override
+  Widget build(BuildContext context) {
+    String cityName = weatherData['name'];
+    String temperature = weatherData['main']['temp'].toString();
+    String description = weatherData['weather'][0]['description'];
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          cityName,
+          style: TextStyle(fontSize: 32),
+        ),
+        Text(
+          '$temperature°C',
+          style: TextStyle(fontSize: 48),
+        ),
+        Text(
+          description,
+          style: TextStyle(fontSize: 24),
+        ),
+      ],
+    );
+  }
+}
